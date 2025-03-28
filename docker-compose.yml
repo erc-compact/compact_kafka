@@ -1,18 +1,5 @@
 ---
-version: '2'
 services:
-  mariadb:
-    image: mariadb:latest
-    container_name: mariadb
-    #platform: linux/arm64
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: "compact"
-    volumes:
-      - ./compact_v23_empty.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
@@ -43,17 +30,23 @@ services:
     # See https://rmoff.net/2018/08/02/kafka-listeners-explained/ for details
     # "`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-
     #
-      - 9092:9092
-      - 29092:29092
-      - 49092:49092
+      - 9092:9092  #HOST machine, HPC Cluster1 -> CONTRA
+      - 29092:29092 #Internal Docker communication
+      - 39092:39092 #HPC Cluster 2 -> Hercules
+      - 49092:49092 #HPC Cluster 3 -> Ngarru/OzSTAR
+      - 59092:59092 #HPC Cluster 4 -> Edgar
+      - 60092:60092
+      - 60093:60093
+      - 60094:60094
+      - 60095:60095
+  #Docker restricts container ports from 1-65535. Hence we increment by one from 60092.
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_REMOTE:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,HERCULES:PLAINTEXT,NGARRU:PLAINTEXT,EDGAR:PLAINTEXT,FUTURE:PLAINTEXT,FUTURE1:PLAINTEXT,FUTURE2:PLAINTEXT,FUTURE3:PLAINTEXT 
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://:29092,PLAINTEXT_HOST://:9092,PLAINTEXT_REMOTE://:49092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092,PLAINTEXT_REMOTE://localhost:49092
-      #KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:29092,PLAINTEXT_HOST://:9092,HERCULES://:39092,NGARRU://:49092,EDGAR://:59092,FUTURE://:60092,FUTURE1://:60093,FUTURE2://:60094,FUTURE3://:60095 
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092,HERCULES://localhost:39092,NGARRU://localhost:49092,EDGAR://localhost:59092,FUTURE://localhost:60092,FUTURE1://localhost:60093,FUTURE2://localhost:60094,FUTURE3://localhost:60095
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
