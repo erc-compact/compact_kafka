@@ -11,14 +11,18 @@ DATA_DIR="${SCRIPT_DIR}/data"
 CONNECTORS_DIR="${SCRIPT_DIR}/../connectors"
 
 mkdir -p "${INSTANCE_DIR}" "${DATA_DIR}" "${CONNECTORS_DIR}"
-mkdir -p "${DATA_DIR}/zookeeper" "${DATA_DIR}/kafka" "${DATA_DIR}/schema-registry"
+mkdir -p "${DATA_DIR}/zookeeper/data" "${DATA_DIR}/zookeeper/log"
+mkdir -p "${DATA_DIR}/kafka/data"
+mkdir -p "${DATA_DIR}/schema-registry"
 
 SERVICE=$1
 
 case "${SERVICE}" in
     zookeeper)
         singularity exec \
-            --bind "${DATA_DIR}/zookeeper:/var/lib/zookeeper" \
+            --writable-tmpfs \
+            --bind "${DATA_DIR}/zookeeper/data:/var/lib/zookeeper/data" \
+            --bind "${DATA_DIR}/zookeeper/log:/var/lib/zookeeper/log" \
             --env ZOOKEEPER_CLIENT_PORT=2181 \
             --env ZOOKEEPER_TICK_TIME=2000 \
             "${INSTANCE_DIR}/zookeeper.sif" \
@@ -27,13 +31,14 @@ case "${SERVICE}" in
 
     broker)
         singularity exec \
-            --bind "${DATA_DIR}/kafka:/var/lib/kafka" \
+            --writable-tmpfs \
+            --bind "${DATA_DIR}/kafka/data:/var/lib/kafka/data" \
             --env KAFKA_BROKER_ID=1 \
             --env KAFKA_ZOOKEEPER_CONNECT=localhost:2181 \
             --env KAFKA_LISTENER_SECURITY_PROTOCOL_MAP="PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,HERCULES:PLAINTEXT,NGARRU:PLAINTEXT,EDGAR:PLAINTEXT,FUTURE:PLAINTEXT,FUTURE1:PLAINTEXT,FUTURE2:PLAINTEXT,FUTURE3:PLAINTEXT" \
             --env KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
-            --env KAFKA_LISTENERS="PLAINTEXT://:29092,PLAINTEXT_HOST://:9092,HERCULES://:9093 \
-            --env KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://localhost:29092,PLAINTEXT_HOST://localhost:9092 \
+            --env KAFKA_LISTENERS="PLAINTEXT://:29092,PLAINTEXT_HOST://:9092,HERCULES://:39092,NGARRU://:49092,EDGAR://:59092,FUTURE://:60092,FUTURE1://:60093,FUTURE2://:60094,FUTURE3://:60095" \
+            --env KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://localhost:29092,PLAINTEXT_HOST://localhost:9092,HERCULES://localhost:39092,NGARRU://localhost:49092,EDGAR://localhost:59092,FUTURE://localhost:60092,FUTURE1://localhost:60093,FUTURE2://localhost:60094,FUTURE3://localhost:60095" \
             --env KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
             --env KAFKA_DELETE_TOPIC_ENABLE=true \
             --env KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
@@ -46,6 +51,7 @@ case "${SERVICE}" in
 
     schema-registry)
         singularity exec \
+            --writable-tmpfs \
             --bind "${DATA_DIR}/schema-registry:/var/lib/schema-registry" \
             --env SCHEMA_REGISTRY_HOST_NAME=localhost \
             --env SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=localhost:29092 \
@@ -89,6 +95,7 @@ case "${SERVICE}" in
 
     ksqldb)
         singularity exec \
+            --writable-tmpfs \
             --env KSQL_LISTENERS=http://0.0.0.0:8088 \
             --env KSQL_BOOTSTRAP_SERVERS=localhost:29092 \
             --env KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE=true \

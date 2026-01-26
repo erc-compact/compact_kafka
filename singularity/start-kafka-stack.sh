@@ -12,7 +12,9 @@ CONNECTORS_DIR="${SCRIPT_DIR}/../connectors"
 
 # Create necessary directories
 mkdir -p "${INSTANCE_DIR}" "${DATA_DIR}" "${LOG_DIR}" "${CONNECTORS_DIR}"
-mkdir -p "${DATA_DIR}/zookeeper" "${DATA_DIR}/kafka" "${DATA_DIR}/schema-registry"
+mkdir -p "${DATA_DIR}/zookeeper/data" "${DATA_DIR}/zookeeper/log"
+mkdir -p "${DATA_DIR}/kafka/data"
+mkdir -p "${DATA_DIR}/schema-registry"
 
 # Colors for output
 RED='\033[0;31m'
@@ -88,10 +90,11 @@ start_zookeeper() {
     log_info "Starting Zookeeper..."
 
     singularity instance start \
-        --bind "${DATA_DIR}/zookeeper:/var/lib/zookeeper" \
+        --writable-tmpfs \
+        --bind "${DATA_DIR}/zookeeper/data:/var/lib/zookeeper/data" \
+        --bind "${DATA_DIR}/zookeeper/log:/var/lib/zookeeper/log" \
         --env ZOOKEEPER_CLIENT_PORT=2181 \
         --env ZOOKEEPER_TICK_TIME=2000 \
-        --net --network-args "portmap=2181:2181/tcp" \
         "${INSTANCE_DIR}/zookeeper.sif" \
         zookeeper
 
@@ -110,7 +113,8 @@ start_broker() {
     # We need to adjust the advertised listeners accordingly
 
     singularity instance start \
-        --bind "${DATA_DIR}/kafka:/var/lib/kafka" \
+        --writable-tmpfs \
+        --bind "${DATA_DIR}/kafka/data:/var/lib/kafka/data" \
         --env KAFKA_BROKER_ID=1 \
         --env KAFKA_ZOOKEEPER_CONNECT=localhost:2181 \
         --env KAFKA_LISTENER_SECURITY_PROTOCOL_MAP="PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,HERCULES:PLAINTEXT,NGARRU:PLAINTEXT,EDGAR:PLAINTEXT,FUTURE:PLAINTEXT,FUTURE1:PLAINTEXT,FUTURE2:PLAINTEXT,FUTURE3:PLAINTEXT" \
@@ -137,6 +141,7 @@ start_schema_registry() {
     log_info "Starting Schema Registry..."
 
     singularity instance start \
+        --writable-tmpfs \
         --bind "${DATA_DIR}/schema-registry:/var/lib/schema-registry" \
         --env SCHEMA_REGISTRY_HOST_NAME=localhost \
         --env SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=localhost:29092 \
@@ -156,6 +161,7 @@ start_kafka_connect() {
     log_info "Starting Kafka Connect..."
 
     singularity instance start \
+        --writable-tmpfs \
         --bind "${CONNECTORS_DIR}:/connectors" \
         --env CONNECT_BOOTSTRAP_SERVERS=localhost:29092 \
         --env CONNECT_REST_ADVERTISED_HOST_NAME=localhost \
@@ -200,6 +206,7 @@ start_ksqldb() {
     log_info "Starting ksqlDB..."
 
     singularity instance start \
+        --writable-tmpfs \
         --env KSQL_LISTENERS=http://0.0.0.0:8088 \
         --env KSQL_BOOTSTRAP_SERVERS=localhost:29092 \
         --env KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE=true \
